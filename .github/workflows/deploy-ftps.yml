@@ -17,6 +17,7 @@ jobs:
         with:
           node-version: 20
 
+      # pokud nemáš package-lock.json, klidně dej "npm install"
       - name: Install deps
         run: npm ci
 
@@ -24,15 +25,15 @@ jobs:
         run: npm run build
 
       - name: Deploy to Active24 via FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}      # plynule.com
           username: ${{ secrets.FTP_USERNAME }}  # admin.plynule.com
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           port: 21
-          local-dir: build/                      # SvelteKit + adapter-static → build/
-          server-dir: /public_html/              # cílový adresář na Active24
+          local-dir: build/                      # SvelteKit + adapter-static = build/
+          server-dir: /public_html/
           exclude: |
             **/.git*
             **/node_modules/**
