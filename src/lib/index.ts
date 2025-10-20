@@ -13,6 +13,7 @@ export const defaultItalicLetters: ReadonlySet<string> = new Set([
     'l',
     'g',
     'h',
+    '?',
     'b'
 ]);
 
