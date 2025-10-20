@@ -2,7 +2,7 @@ name: Deploy via FTPS (Active24)
 
 on:
   push:
-    branches: [ "main" ]   # spouštět na push do main
+    branches: [ "main" ]
 
 jobs:
   build-and-deploy:
@@ -17,24 +17,25 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install deps
-        run: npm ci
+      # ⬇️ KLÍČOVÉ: zahodíme lock z macOS a nainstalujeme pro Linux
+      - name: Clean lockfile for Linux install
+        run: rm -f package-lock.json
+
+      - name: Install deps (fresh)
+        run: npm install --no-audit --fund=false
 
       - name: Build (SvelteKit static)
         run: npm run build
 
-      - name: Show build dir (debug)
-        run: ls -la ./build || true
-
       - name: Deploy to Active24 via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server:   ${{ secrets.FTP_SERVER }}      # plynule.com
-          username: ${{ secrets.FTP_USERNAME }}    # admin.plynule.com
+          server:   ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           port: 21
-          local-dir: build/                        # SvelteKit + adapter-static → build/
+          local-dir: build/
           server-dir: /public_html/
           exclude: |
             **/.git*
