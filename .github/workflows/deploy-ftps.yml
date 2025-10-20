@@ -1,0 +1,39 @@
+name: Deploy via FTPS (Active24)
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build (SvelteKit static)
+        run: npm run build
+
+      - name: Deploy to Active24 via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4
+        with:
+          server: ${{ secrets.FTP_SERVER }}      # plynule.com
+          username: ${{ secrets.FTP_USERNAME }}  # admin.plynule.com
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: build/                      # SvelteKit + adapter-static → build/
+          server-dir: /public_html/              # cílový adresář na Active24
+          exclude: |
+            **/.git*
+            **/node_modules/**
+            **/.svelte-kit/**
