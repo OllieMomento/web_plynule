@@ -6,7 +6,7 @@ const config = {
 	kit: {
 		adapter: adapter({ fallback: 'index.html', strict: false }),
 		prerender: { entries: [] },
-		paths: { base: '/new' }  // jen pokud nasazuješ do podadresáře
+		//paths: { base: '/new' }  // jen pokud nasazuješ do podadresáře
 	}
 };
 export default config;

@@ -1,8 +1,24 @@
-DirectoryIndex index.html
+DirectoryIndex index.html index.php
 
 RewriteEngine On
-RewriteBase /new/
+RewriteBase /
 RewriteRule ^index\.html$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /new/index.html [L]
+RewriteRule . /index.html [L]
+
+# (volitelné) cache
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/javascript "access plus 1 year"
+  ExpiresByType text/css        "access plus 1 year"
+  ExpiresByType image/png       "access plus 1 year"
+  ExpiresByType image/jpeg      "access plus 1 year"
+  ExpiresByType image/webp      "access plus 1 year"
+  ExpiresByType font/woff2      "access plus 1 year"
+</IfModule>
+<FilesMatch "\.(html)$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </IfModule>
+</FilesMatch>

@@ -36,7 +36,7 @@ jobs:
           protocol: ftps
           port: 21
           local-dir: build/
-          server-dir: /plynule.com/new/
+          server-dir: /plynule.com/   # ← nasazení přímo na plynule.com
           exclude: |
             **/.git*
             **/node_modules/**
