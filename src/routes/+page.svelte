@@ -1,7 +1,7 @@
 <!-- Layout-only scaffold for landing page -->
 <script lang="ts">
     import StylizedHeading from "$lib/components/StylizedHeading.svelte";
-    import { onMount } from "svelte";
+    import { onMount, onDestroy } from "svelte";
 
     // Header paths for morphing
     const CURVE_PATH =
@@ -71,6 +71,57 @@
                 },
             });
         })();
+    });
+
+    // Simple typewriter for the news ticker
+    const typewriterMessages: string[] = [
+        "We are Ollie and Filip. We build furniture. Because boring furniture already exists.",
+    ];
+    let typewriterDisplayed = "";
+    let typewriterIndex = 0;
+    let isDeleting = false;
+    let loopIndex = 0;
+    let typewriterTimer: number | undefined;
+    const lockPrefix = "We are Ollie and Filip.";
+
+    function schedule(nextInMs: number) {
+        clearTimeout(typewriterTimer);
+        typewriterTimer = setTimeout(tick, nextInMs) as unknown as number;
+    }
+
+    function tick() {
+        const full = typewriterMessages[loopIndex % typewriterMessages.length];
+        if (!isDeleting) {
+            typewriterDisplayed = full.slice(0, typewriterIndex + 1);
+            typewriterIndex++;
+            if (typewriterIndex === full.length) {
+                isDeleting = true;
+                schedule(1200); // pause at end
+            } else {
+                schedule(80); // typing speed
+            }
+        } else {
+            const nextIndex = typewriterIndex - 1;
+            if (typewriterIndex > lockPrefix.length) {
+                typewriterDisplayed = full.slice(0, nextIndex);
+                typewriterIndex--;
+                schedule(40); // deleting speed
+            } else {
+                // Reached the locked prefix; pause then type forward again
+                typewriterDisplayed = lockPrefix;
+                typewriterIndex = lockPrefix.length;
+                isDeleting = false;
+                schedule(600); // pause before typing the suffix again
+            }
+        }
+    }
+
+    onMount(() => {
+        schedule(400);
+    });
+
+    onDestroy(() => {
+        clearTimeout(typewriterTimer);
     });
 </script>
 
@@ -152,7 +203,33 @@
                     </div>
                     <article class="pt-4">
                         <h3 class="text-3xl font-extrabold leading-tight px-8">
-                            We Don’t Buy Wood, We Make It
+                            We <span class="relative inline-block">
+                                <svg
+                                    class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[2.6em] h-[2.6em] text-black opacity-40 -z-10 pointer-events-none"
+                                    viewBox="0 0 100 100"
+                                    aria-hidden="true"
+                                >
+                                    <line
+                                        x1="15"
+                                        y1="15"
+                                        x2="85"
+                                        y2="85"
+                                        stroke="currentColor"
+                                        stroke-width="12"
+                                        stroke-linecap="round"
+                                    />
+                                    <line
+                                        x1="85"
+                                        y1="15"
+                                        x2="15"
+                                        y2="85"
+                                        stroke="currentColor"
+                                        stroke-width="12"
+                                        stroke-linecap="round"
+                                    />
+                                </svg>
+                                Don’t
+                            </span> Buy Wood
                         </h3>
                         <p class="mt-4 text-xl leading-9 px-8">
                             We go into the forest, drop the tree, and turn it
@@ -169,7 +246,14 @@
                     </div>
                     <article class="pt-4">
                         <h3 class="text-3xl font-extrabold leading-tight px-8">
-                            Straight Is So Last Year
+                            <span class="not-straight" aria-label="Straight">
+                                <span>S</span><span>t</span><span>r</span><span
+                                    >a</span
+                                ><span>i</span><span>g</span><span>h</span><span
+                                    >t</span
+                                >
+                            </span>
+                            <span> Is So Last Year</span>
                         </h3>
                         <p class="mt-4 text-xl leading-9 px-8">
                             For centuries, straight lines ruled — in furniture
@@ -186,7 +270,9 @@
                     </div>
                     <article class="pt-4">
                         <h3 class="text-3xl font-extrabold leading-tight px-8">
-                            Chasing the Perfect Hueeeee
+                            Chasing the <span class="gradient-hue"
+                                >Perfect Hue</span
+                            >
                         </h3>
                         <p class="mt-4 text-xl leading-9 px-8">
                             We test oils like mad scientists and mix pigments
@@ -201,17 +287,15 @@
             <div class="hidden md:block">
                 <!-- Top labels bar -->
                 <div
-                    class="px-12 grid grid-cols-3 bg-black text-white text-xl md:text-2xl tracking-wide"
+                    class="px-12 gap-16 grid grid-cols-3 bg-black text-white text-xl md:text-2xl tracking-wide"
                 >
-                    <div class="px-4 py-3">Material</div>
-                    <div class="px-4 py-3">Form</div>
-                    <div class="px-4 py-3">Finnish</div>
+                    <div class=" py-3">Material</div>
+                    <div class=" py-3">Form</div>
+                    <div class=" py-3">Finish</div>
                 </div>
 
                 <!-- Content with decorative dividers -->
-                <div
-                    class="px-12 relative grid gap-10 lg:gap-16 md:grid-cols-3 pt-8"
-                >
+                <div class="px-12 relative grid gap-16 grid-cols-3 pt-8">
                     <!-- vertical wavy dividers -->
                     <svg
                         class="hidden md:block absolute top-0 bottom-0 text-black"
@@ -231,7 +315,7 @@
                     </svg>
                     <svg
                         class="hidden md:block absolute top-0 bottom-0 text-black"
-                        style="left: 66.6666%"
+                        style="left: 65.6666%"
                         width="16"
                         height="100%"
                         viewBox="0 0 16 600"
@@ -250,12 +334,38 @@
                         <h3
                             class="text-3xl md:text-4xl font-extrabold leading-tight"
                         >
-                            Wood, but Not Bought
+                            We <span class="relative inline-block">
+                                <svg
+                                    class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[2.6em] h-[2.6em] text-black opacity-30 -z-10 pointer-events-none"
+                                    viewBox="0 0 100 100"
+                                    aria-hidden="true"
+                                >
+                                    <line
+                                        x1="20"
+                                        y1="25"
+                                        x2="80"
+                                        y2="80"
+                                        stroke="currentColor"
+                                        stroke-width="12"
+                                        stroke-linecap="square"
+                                    />
+                                    <line
+                                        x1="80"
+                                        y1="25"
+                                        x2="20"
+                                        y2="80"
+                                        stroke="currentColor"
+                                        stroke-width="12"
+                                        stroke-linecap="square"
+                                    />
+                                </svg>
+                                Don’t
+                            </span> Buy Wood
                         </h3>
                         <p class="mt-4 text-xl leading-9">
-                            We harvest our own ash and maple from the Broumov
-                            forests in the Czech Republic. Each log dries
-                            naturally for years.
+                            We go into the forest, drop the tree, and turn it
+                            into planks ourselves. Each log is cut, stacked, and
+                            left to dry naturally — no shortcuts.
                         </p>
                     </article>
 
@@ -263,11 +373,19 @@
                         <h3
                             class="text-3xl md:text-4xl font-extrabold leading-tight"
                         >
-                            Straight is So Last Year
+                            <span class="not-straight" aria-label="Straight">
+                                <span>S</span><span>t</span><span>r</span><span
+                                    >a</span
+                                ><span>i</span><span>g</span><span>h</span><span
+                                    >t</span
+                                >
+                            </span>
+                            <span> Is So Last Year</span>
                         </h3>
                         <p class="mt-4 text-xl leading-9">
-                            For centuries, straight lines was the only way. Not
-                            anymore. straight and plynule lines meet
+                            For centuries, straight lines ruled — in furniture
+                            and, well, everywhere else. Turns out, it’s okay to
+                            bend a little.
                         </p>
                     </article>
 
@@ -275,12 +393,14 @@
                         <h3
                             class="text-3xl md:text-4xl font-extrabold leading-tight"
                         >
-                            Chasing the Perfect Hue
+                            Chasing the <span class="gradient-hue"
+                                >Perfect Hue</span
+                            >
                         </h3>
                         <p class="mt-4 text-xl leading-9">
-                            We finish each shelf with premium oils, layered to
-                            enhance the grain and add rich, lasting color. We
-                            mix and match to find the sweet spot in every shade
+                            We test oils like mad scientists and mix pigments
+                            until something clicks. Each finish has its own
+                            mood. That’s how we like it.
                         </p>
                     </article>
                 </div>
@@ -321,6 +441,7 @@
                         fill="none"
                     />
                     <text
+                        class="wave-text wave-text-primary"
                         fill="currentColor"
                         font-size="44"
                         font-weight="500"
@@ -335,7 +456,26 @@
                                 dur="8s"
                                 repeatCount="indefinite"
                             />
-                            Follow our rhythm
+                            follow our rhythm
+                        </textPath>
+                    </text>
+                    <text
+                        class="wave-text wave-text-alt"
+                        fill="currentColor"
+                        font-size="44"
+                        font-weight="500"
+                        text-anchor="middle"
+                        dominant-baseline="middle"
+                    >
+                        <textPath href="#how-wave" startOffset="50%">
+                            <animate
+                                attributeName="startOffset"
+                                from="-10%"
+                                to="110%"
+                                dur="8s"
+                                repeatCount="indefinite"
+                            />
+                            follow our insta
                         </textPath>
                     </text>
                 </svg>
@@ -364,23 +504,15 @@
                 class="-m-0 px-4 py-6 mt-4 bg-black text-white text-xl md:text-2xl tracking-wide"
             >
                 <div class="news-ticker overflow-hidden whitespace-nowrap">
-                    <div class="ticker-track animate-ticker-ltr">
-                        <span class="ticker-copy"
-                            >Ollie & Filip. We build stuff we like. Boring isn’t
-                            one of them. •
-                        </span>
-                        <span class="ticker-copy" aria-hidden="true"
-                            >Ollie & Filip. We build stuff we like. Boring isn’t
-                            one of them. •
-                        </span>
-                    </div>
+                    <span class="typewriter">{typewriterDisplayed}</span>
+                    <span class="caret" aria-hidden="true"></span>
                 </div>
             </div>
             <!-- About block with image comparison slider -->
             <div class="about mx-auto max-w-6xl">
                 <div class="relative">
                     <img-comparison-slider
-                        class="slider-example-split-line"
+                        class="slider-example-split-line border-2 border-black"
                         value="20%"
                     >
                         <div slot="first" class="ics-left relative">
@@ -407,7 +539,7 @@
                             >
                                 <path
                                     d="M83.6144 192.876C59.5707 184.532 28.403 182.829 12.7301 168.865C-2.76476 154.73 -3.12095 128.334 6.31843 107.047C15.7578 85.7593 34.9927 69.5811 47.6379 50.5077C60.2831 31.4344 66.1605 9.29574 80.7648 2.48383C95.3691 -4.15777 118.344 4.5274 140.963 5.37888C163.582 6.06007 185.845 -1.09243 203.833 3.6759C221.821 8.44423 235.713 25.3037 242.481 43.5255C249.427 61.9176 249.071 81.8424 245.509 99.7237C241.768 117.775 235.001 133.613 227.877 151.494C220.753 169.205 213.272 188.789 198.846 202.413C184.42 216.037 162.87 223.7 143.813 220.124C124.578 216.377 107.48 201.221 83.6144 192.876Z"
-                                    fill="#E4E0DD"
+                                    fill="#FFFFFF"
                                 />
                                 <circle
                                     cx="124.96"
@@ -453,6 +585,16 @@
     }
     :global(.how-section .wave svg) {
         color: #111111;
+    }
+    /* Swap wave text only when the IG button is hovered */
+    :global(.wave-text-alt) {
+        display: none;
+    }
+    :global(.how-section:has(.ig-btn:hover) .wave .wave-text-primary) {
+        display: none;
+    }
+    :global(.how-section:has(.ig-btn:hover) .wave .wave-text-alt) {
+        display: inline;
     }
     :global(.how-section .ig-btn) {
         filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25));
@@ -503,27 +645,92 @@
     :global(nav .nav-link:hover) {
         transform: skewX(-20deg);
     }
-    /* News ticker animation */
-    @keyframes ticker-ltr {
-        from {
-            transform: translateX(0);
-        }
-        to {
-            transform: translateX(50%);
-        }
+    /* Gradient text for "Perfect Hue" */
+    :global(.gradient-hue) {
+        background: linear-gradient(
+            90deg,
+            #111111 0%,
+            #5b5b5b 18%,
+            #8a5b2f 32%,
+            /* warm brown */ #c28f2c 44%,
+            /* gold */ #3e7a9c 58%,
+            /* teal-blue */ #6a4ea1 72%,
+            /* violet */ #111111 100%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
     }
+    /* Make the word "Straight" not straight */
+    :global(.not-straight) {
+        display: inline-block;
+        white-space: nowrap;
+    }
+    :global(.not-straight > span) {
+        display: inline-block;
+        transform-origin: center bottom;
+    }
+    :global(.not-straight > span:nth-child(1)) {
+        transform: translateY(0em) rotate(-6deg);
+    }
+    :global(.not-straight > span:nth-child(2)) {
+        transform: translateY(0.08em) rotate(-4deg);
+    }
+    :global(.not-straight > span:nth-child(3)) {
+        transform: translateY(0.16em) rotate(-2deg);
+    }
+    :global(.not-straight > span:nth-child(4)) {
+        transform: translateY(0.24em) rotate(0deg);
+    }
+    :global(.not-straight > span:nth-child(5)) {
+        transform: translateY(0.16em) rotate(2deg);
+    }
+    :global(.not-straight > span:nth-child(6)) {
+        transform: translateY(0.08em) rotate(4deg);
+    }
+    :global(.not-straight > span:nth-child(7)) {
+        transform: translateY(0em) rotate(6deg);
+    }
+    :global(.not-straight > span:nth-child(8)) {
+        transform: translateY(-0.06em) rotate(8deg);
+    }
+    /* Typewriter styles */
     :global(.news-ticker) {
         position: relative;
+        font-size: inherit; /* match parent (text-xl, md:text-2xl) */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        text-align: center;
     }
-    :global(.ticker-track) {
-        display: inline-flex;
-        white-space: nowrap;
-        will-change: transform;
+    @keyframes caret-blink {
+        0%,
+        49% {
+            opacity: 1;
+        }
+        50%,
+        100% {
+            opacity: 0;
+        }
     }
-    :global(.ticker-copy) {
-        padding-right: 2rem;
+    .caret {
+        display: inline-block;
+        width: 0.1em;
+        height: 1em;
+        background: currentColor;
+        vertical-align: -0.1em;
+        margin-left: 0.15em;
+        animation: caret-blink 1s step-end infinite;
     }
-    :global(.animate-ticker-ltr) {
-        animation: ticker-ltr 18s linear infinite;
+    /* Remove blue focus/active outline from the comparison slider */
+    :global(img-comparison-slider) {
+        -webkit-tap-highlight-color: transparent;
+    }
+    :global(img-comparison-slider:focus),
+    :global(img-comparison-slider:focus-visible),
+    :global(img-comparison-slider:focus-within) {
+        outline: none !important;
+        box-shadow: none !important;
     }
 </style>
