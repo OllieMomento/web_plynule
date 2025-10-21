@@ -216,7 +216,7 @@
                                         y2="85"
                                         stroke="currentColor"
                                         stroke-width="12"
-                                        stroke-linecap="round"
+                                        stroke-linecap="square"
                                     />
                                     <line
                                         x1="85"
@@ -225,7 +225,7 @@
                                         y2="85"
                                         stroke="currentColor"
                                         stroke-width="12"
-                                        stroke-linecap="round"
+                                        stroke-linecap="square"
                                     />
                                 </svg>
                                 Don’t
@@ -362,7 +362,9 @@
                                 Don’t
                             </span> Buy Wood
                         </h3>
-                        <p class="mt-4 text-xl leading-9">
+                        <p
+                            class="mt-4 text-lg md:text-xl leading-8 md:leading-9"
+                        >
                             We go into the forest, drop the tree, and turn it
                             into planks ourselves. Each log is cut, stacked, and
                             left to dry naturally — no shortcuts.
@@ -382,7 +384,9 @@
                             </span>
                             <span> Is So Last Year</span>
                         </h3>
-                        <p class="mt-4 text-xl leading-9">
+                        <p
+                            class="mt-4 text-lg md:text-xl leading-8 md:leading-9"
+                        >
                             For centuries, straight lines ruled — in furniture
                             and, well, everywhere else. Turns out, it’s okay to
                             bend a little.
@@ -397,7 +401,9 @@
                                 >Perfect Hue</span
                             >
                         </h3>
-                        <p class="mt-4 text-xl leading-9">
+                        <p
+                            class="mt-4 text-lg md:text-xl leading-8 md:leading-9"
+                        >
                             We test oils like mad scientists and mix pigments
                             until something clicks. Each finish has its own
                             mood. That’s how we like it.
