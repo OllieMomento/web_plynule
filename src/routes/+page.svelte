@@ -133,11 +133,11 @@
 </svelte:head>
 
 <header class="sticky top-2 z-30 bg-transparent absolute h-32 mx-auto">
-    <div class="relative z-30 mx-auto max-w-xl flex py-3">
+    <div class="relative z-30 mx-auto max-w-xl flex py-3 pr-0 sm:pr-4">
         <a href="/" class="leading-none inline-flex items-center">
-            <img src="/logo_1.svg" alt="Plynule" class="h-8 md:h-10 w-auto" />
+            <img src="/logo_1.svg" alt="Plynule" class="px-8 h-10 w-auto" />
         </a>
-        <nav class="hidden sm:flex flex-1 justify-end gap-3 text-2xl">
+        <nav class=" sm:flex flex-1 justify-end gap-3 text-2xl">
             <a href="#what" class="nav-link">what?</a>
             <a href="#how" class="nav-link">how?</a>
             <a href="#who" class="nav-link">who?</a>
@@ -149,7 +149,7 @@
     >
         <svg
             class="w-full h-20"
-            viewBox="0 0 954 125"
+            viewBox="0 0 911 125"
             xmlns="http://www.w3.org/2000/svg"
             preserveAspectRatio="none"
             aria-hidden="true"
