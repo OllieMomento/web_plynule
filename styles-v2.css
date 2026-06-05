@@ -241,3 +241,12 @@ figcaption{padding:12px 14px 12px;}
 
 /* Utility (to mimic Tailwind's -m-7 request) */
 .-m-7{ margin:-1.75rem; }
+
+/* Brand letters (p,l,y,n,u,l,e) italicised inside headlines */
+.brand-letter{
+  font-style: italic;
+  font-weight: inherit;
+  /* tiny optical nudge so italics sit nicely next to upright caps */
+  display: inline-block;
+  transform: translateY(-0.01em);
+}

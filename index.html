@@ -111,6 +111,69 @@ function App() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Italicise the brand letters (p,l,y,n,u,l,e → "plynule") inside headlines
+  useEffect(() => {
+    const HEADLINE_SELECTORS = '.display, .cta-display, .secnum .l, .pl-readout h3, .maker .mname, .makers-lead, .pl-post-cap';
+    const BRAND_RE = /[plynue]/i;
+
+    function wrap(el) {
+      if (!el || el.dataset.brandWrapped === '1') return;
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+        acceptNode(n) {
+          const p = n.parentNode;
+          if (p && p.classList && p.classList.contains('brand-letter')) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+      const nodes = [];
+      let n;
+      while ((n = walker.nextNode())) nodes.push(n);
+      nodes.forEach(node => {
+        const text = node.nodeValue;
+        if (!BRAND_RE.test(text)) return;
+        const frag = document.createDocumentFragment();
+        let buf = '';
+        for (const ch of text) {
+          if (BRAND_RE.test(ch)) {
+            if (buf) { frag.appendChild(document.createTextNode(buf)); buf = ''; }
+            const s = document.createElement('span');
+            s.className = 'brand-letter';
+            s.textContent = ch;
+            frag.appendChild(s);
+          } else {
+            buf += ch;
+          }
+        }
+        if (buf) frag.appendChild(document.createTextNode(buf));
+        node.parentNode.replaceChild(frag, node);
+      });
+      el.dataset.brandWrapped = '1';
+    }
+
+    const runAll = () => document.querySelectorAll(HEADLINE_SELECTORS).forEach(wrap);
+
+    // initial pass after Story has had a tick to mount
+    const tid = setTimeout(runAll, 0);
+
+    // Story swaps the scene title (.pl-readout h3) on each slide change — watch it
+    const readout = document.querySelector('.pl-readout');
+    let mo;
+    if (readout && 'MutationObserver' in window) {
+      mo = new MutationObserver(() => {
+        mo.disconnect();
+        const h3 = readout.querySelector('h3');
+        if (h3) { delete h3.dataset.brandWrapped; wrap(h3); }
+        mo.observe(readout, { childList: true, subtree: true, characterData: true });
+      });
+      mo.observe(readout, { childList: true, subtree: true, characterData: true });
+    }
+
+    return () => {
+      clearTimeout(tid);
+      mo && mo.disconnect();
+    };
+  }, []);
+
   useEffect(() => {
     const els = Array.from(document.querySelectorAll('.reveal, .line-mask'));
     const reveal = (el) => el.classList.add('in');
