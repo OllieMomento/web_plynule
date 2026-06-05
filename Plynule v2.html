@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Plynule — from tree to table (eventually)</title>
+<script>document.documentElement.classList.add('js');</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="styles-v2.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="image-slot.js"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="js/characters.jsx"></script>
+<script type="text/babel" src="js/props.jsx"></script>
+<script type="text/babel" src="js/scenes-a.jsx"></script>
+<script type="text/babel" src="js/scenes-b.jsx"></script>
+<script type="text/babel" src="js/story.jsx"></script>
+<script type="text/babel" src="js/feed.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+const IG = "https://www.instagram.com/plynule/";
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": [
+    "#FF5DA2",
+    "#15110B"
+  ],
+  "paper": [
+    "#F2ECE0",
+    "#E8DECB"
+  ],
+  "speed": 0.9,
+  "columns": "2"
+}/*EDITMODE-END*/;
+
+function IgGlyph({ size = 16 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="2" />
+      <circle cx="17.5" cy="6.5" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+function Logo({ h = 40 }) {
+  return <video src="assets/PlynuleLogo.mp4" autoPlay muted loop playsInline style={{ height: h }} />;
+}
+
+const MARQUEE = ['Handmade', 'Air-dried 4 years', 'No screws', 'One of one', 'Fine oils only', "Mates\u2019 rates"];
+function Marquee({ lime = false }) {
+  const group = (
+    <span>
+      {MARQUEE.map((w, i) => (<React.Fragment key={i}>{w}<span className="star"> ✶ </span></React.Fragment>))}
+    </span>
+  );
+  return (
+    <div className={'marquee' + (lime ? ' lime' : '')} aria-hidden="true">
+      <div className="marquee-track"><span>{group}{group}</span></div>
+    </div>
+  );
+}
+
+// About text — used as a news-style crawling ticker
+const ABOUT_TICKER_TEXT = "We\u2019re Ollie and Filip — friends who\u2019d been hanging out for years before realizing just how well our skills actually fit together. With technical know-how from engineering and woodworking, combined with a creative eye from design and filmmaking, we found the perfect balance to kick things off by building shelves. And honestly? It\u2019s brought us a lot of happiness along the way. When we finished that first shelf, it just clicked. After six months of admiring it (and feeling pretty pleased with ourselves), we decided to share that feeling with you. Now, we\u2019re here to offer you the chance to bring one of these unique pieces into your own home.";
+function NewsTicker({ className = "" }) {
+  // Duplicate content to create a seamless loop
+  const content = (
+    <span>
+      {ABOUT_TICKER_TEXT} <span className="star">✶</span> {ABOUT_TICKER_TEXT}
+    </span>
+  );
+  return (
+    <div className={'marquee ' + className} aria-hidden="true">
+      <div className="marquee-track"><span>{content}</span></div>
+    </div>
+  );
+}
+
+function MakerCard({ variant, beard }) {
+  return (
+    <div className="reveal-card">
+      <svg viewBox="0 0 64 126"><Friend variant={variant} pose="wave" beard={beard} /></svg>
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const r = document.documentElement;
+    r.style.setProperty('--accent', t.accent[0]);
+    r.style.setProperty('--accent-ink', t.accent[1]);
+    r.style.setProperty('--paper', t.paper[0]);
+    r.style.setProperty('--paper2', t.paper[1]);
+  }, [t.accent, t.paper]);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    const els = Array.from(document.querySelectorAll('.reveal, .line-mask'));
+    const reveal = (el) => el.classList.add('in');
+    let io;
+    if ('IntersectionObserver' in window) {
+      io = new IntersectionObserver((ents) => {
+        ents.forEach(e => { if (e.isIntersecting) { reveal(e.target); io.unobserve(e.target); } });
+      }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+      els.forEach(el => io.observe(el));
+    }
+    const revealVisible = () => {
+      els.forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight * 0.95) reveal(el);
+      });
+    };
+    const raf = requestAnimationFrame(revealVisible);
+    const safety = setTimeout(() => els.forEach(el => el.classList.add('force-show')), 1600);
+    return () => { io && io.disconnect(); cancelAnimationFrame(raf); clearTimeout(safety); };
+  }, []);
+
+  const pace = 1 / t.speed;
+  const cols = Number(t.columns);
+
+  const makers = [
+    { name: 'Ollie', role: 'fells, swears, air-dries', variant: 'A', beard: 0 },
+    { name: 'Filip', role: 'draws, doubts, oils', variant: 'B', beard: 0 },
+  ];
+
+  return (
+    <React.Fragment>
+      {/* NAV */}
+      <nav className={'nav' + (scrolled ? ' scrolled' : '')}>
+        <a href="#top" className="nav-logo" aria-label="Plynule home"><Logo h={40} /></a>
+        <div className="nav-links">
+          <a className="nav-link" href="#story">Story</a>
+          <a className="nav-link" href="#feed">Feed</a>
+          <a className="nav-link" href="#makers">Makers</a>
+          <a className="nav-link btn accent" href="#contact">Let's talk</a>
+        </div>
+      </nav>
+
+      {/* HERO */}
+      <header className="hero wrap" id="top" data-screen-label="Hero">
+        <div className="hero-top">
+          <span className="kick reveal">Est. one borrowed saw</span>
+          <span className="kick reveal" style={{ '--i': 1 }}>Two friends · zero screws</span>
+        </div>
+        <h1 className="display hero-display">
+          <span className="line-mask"><span>From tree</span></span>
+          <span className="line-mask" style={{ '--i': 1 }}><span>to table</span></span>
+          <span className="line-mask" style={{ '--i': 2 }}><span className="acc">(eventually)</span></span>
+        </h1>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+          <p className="hero-sub reveal" style={{ '--i': 2 }}>Plynule is a two-person furniture workshop. One tree, four years of patience, and absolutely no rush. Here's the whole, slightly ridiculous process — start to finish.</p>
+        </div>
+
+        <section id="story" data-screen-label="Story" className="reveal">
+          <Story pace={pace} accent={t.accent[0]} />
+        </section>
+      </header>
+
+      <NewsTicker className="-m-7" />
+      <Marquee lime />
+
+      {/* FEED — 02 */}
+      <section className="section" id="feed" data-screen-label="Feed">
+        <div className="wrap">
+          <div className="secnum reveal">
+            <span className="n">02</span>
+            <span className="l">From the bench</span>
+            <span className="note">Photos straight off the workshop floor — updated as we post.</span>
+          </div>
+          <div className="feed-bar reveal">
+            <span className="feed-handle"><IgGlyph size={24} /> @plynule</span>
+            <span className="feed-live"><span className="dot"></span> Live from the shop</span>
+            <a className="btn ghost" href={IG} target="_blank" rel="noopener">See it all</a>
+          </div>
+          <div className="reveal"><Feed columns={cols} /></div>
+          <p className="feed-foot hand" style={{ fontSize: 22, color: 'var(--ink-soft)' }}>drag your own photos onto any frame — they stick ✶</p>
+        </div>
+      </section>
+
+      <Marquee />
+
+      {/* MAKERS — 03 */}
+      <section className="section" id="makers" data-screen-label="Makers">
+        <div className="wrap">
+          <div className="secnum reveal">
+            <span className="n">03</span>
+            <span className="l">The makers</span>
+            <span className="note">Two friends who liked wood a normal amount — then way too much.</span>
+          </div>
+          <p className="makers-copy reveal">It started with one tree and a borrowed saw. The plan was a single coffee table. Four years of drying later, we make a handful of pieces a year — each from timber we know by name.</p>
+          <div className="makers reveal">
+            {makers.map(m => (
+              <div className="maker" key={m.name}>
+                <span className="mname">{m.name}</span>
+                <MakerCard variant={m.variant} beard={m.beard} />
+                <span className="mrole">{m.role}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CONTACT — 04 */}
+      <section className="section dark" id="contact" data-screen-label="Contact">
+        <div className="wrap">
+          <div className="secnum reveal">
+            <span className="n">04</span>
+            <span className="l">Let's talk</span>
+            <span className="note">Tell us what you're after and which corner of the room it's for.</span>
+          </div>
+          <h2 className="cta-display reveal">Want one?<br /><span className="acc">Let's talk.</span></h2>
+          <div className="cta-row reveal">
+            <a className="btn accent" href="mailto:hello@plynule.com">Start a commission</a>
+            <a className="btn ghost" href={IG} target="_blank" rel="noopener"><IgGlyph /> DM us on Instagram</a>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="foot">
+        <div className="foot-grid">
+          <Logo h={34} />
+          <span className="czk"><strong>plynule</strong> <span className="hand" style={{ fontSize: 18 }}>(adv.)</span> — smoothly, fluently, without interruption.</span>
+          <a href={IG} target="_blank" rel="noopener" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}><IgGlyph /> @plynule</a>
+          <span className="czk">© {new Date().getFullYear()} Plynule</span>
+        </div>
+      </footer>
+
+      {/* TWEAKS */}
+      <TweaksPanel>
+        <TweakSection label="Look" />
+        <TweakColor label="Accent" value={t.accent}
+          options={[['#C8F23E', '#15110B'], ['#2E6BFF', '#FFFFFF'], ['#E0512F', '#FFFFFF'], ['#FF5DA2', '#15110B']]}
+          onChange={(v) => setTweak('accent', v)} />
+        <TweakColor label="Paper tone" value={t.paper}
+          options={[['#ECE4D2', '#E4D9C0'], ['#EFEAE0', '#E5DDCC'], ['#E9E7DA', '#DCD9C6'], ['#F2ECE0', '#E8DECB']]}
+          onChange={(v) => setTweak('paper', v)} />
+        <TweakSection label="Motion & layout" />
+        <TweakSlider label="Story speed" value={t.speed} min={0.6} max={1.8} step={0.1} unit="×"
+          onChange={(v) => setTweak('speed', v)} />
+        <TweakRadio label="Feed columns" value={t.columns} options={['2', '3', '4']}
+          onChange={(v) => setTweak('columns', v)} />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+</script>
+</body>
+</html>
