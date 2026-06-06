@@ -13,6 +13,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Update Instagram feed
+        run: node scripts/update-instagram-feed.mjs
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          INSTAGRAM_USER_ID: ${{ secrets.INSTAGRAM_USER_ID }}
+
       - name: Deploy to Active24 via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -28,6 +34,7 @@ jobs:
             **/.git*/**
             **/.github/**
             **/node_modules/**
+            **/scripts/**
             **/.svelte-kit/**
             **/.DS_Store
             **/scraps/**
