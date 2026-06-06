@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plynule — Line Morph</title>
+<style>
+  :root{ --line:#1d3a63; --dim:#15110B; }   /* works on light backgrounds */
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:transparent;}
+  body{display:grid;place-items:center;overflow:hidden;background:transparent;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;}
+  #stage{width:100%;height:100%;display:grid;place-items:center;}
+  svg{width:100%;height:100%;display:block;}
+  .fpath{fill:none;stroke:var(--line);stroke-linecap:round;stroke-linejoin:round;}
+  .dim{stroke:var(--dim);stroke-width:1;}
+  .dimtxt{fill:var(--dim);font-size:13px;letter-spacing:1px;}
+</style>
+</head>
+
+<body>
+<div id="stage">
+  <svg id="bp" viewBox="95 60 560 525" preserveAspectRatio="xMidYMid meet" aria-label="Morphing 3D furniture sketch">
+    <g id="dims"></g>
+    <g id="furniture"></g>
+  </svg>
+</div>
+
+<script>
+const NS="http://www.w3.org/2000/svg";
+const SLOTS=11, N=52, FLOOR=520;
+const DX=48, DY=-28;                 // isometric depth vector (back = up-right)
+
+/* ---------- geometry helpers ---------- */
+function wavy(ax,ay,bx,by,amp,waves,phase,segs){
+  segs=segs||26; const pts=[];
+  const dx=bx-ax, dy=by-ay; const len=Math.hypot(dx,dy)||1;
+  const nx=-dy/len, ny=dx/len;
+  for(let k=0;k<=segs;k++){
+    const t=k/segs;
+    const o=amp*Math.sin(t*waves*Math.PI*2+phase)*Math.sin(t*Math.PI);
+    pts.push([ax+dx*t+nx*o, ay+dy*t+ny*o]);
+  }
+  return pts;
+}
+function loop(corners, amp, waves){           // closed wavy polygon through corners
+  const out=[];
+  for(let i=0;i<corners.length;i++){
+    const a=corners[i], b=corners[(i+1)%corners.length];
+    const w=wavy(a[0],a[1],b[0],b[1],amp,waves,i*0.7,14);
+    if(i>0) w.shift();
+    out.push(...w);
+  }
+  return out;
+}
+function ellipseLoop(cx,cy,rx,ry,amp,waves,steps){
+  steps=steps||44; const pts=[];
+  for(let k=0;k<=steps;k++){
+    const t=k/steps, a=t*Math.PI*2;
+    const o=amp*Math.sin(t*waves*Math.PI*2);
+    pts.push([cx+Math.cos(a)*(rx+o), cy+Math.sin(a)*(ry+o)]);
+  }
+  return pts;
+}
+function arcFront(cx,cy,rx,ry,steps){          // bottom (front) half of an ellipse
+  steps=steps||22; const pts=[];
+  for(let k=0;k<=steps;k++){const a=(k/steps)*Math.PI;pts.push([cx+Math.cos(a)*rx, cy+Math.sin(a)*ry]);}
+  return pts;
+}
+const A2=(p)=>[p[0]+DX,p[1]+DY];              // shift a point to the back plane
+function scallop(xL,xR,y,bumps,depth){       // ruffled / wavy bottom edge
+  const pts=[]; const span=(xR-xL)/bumps, steps=9;
+  for(let b=0;b<bumps;b++){
+    const x0=xL+b*span;
+    for(let i=(b?1:0);i<=steps;i++){
+      const t=i/steps;
+      pts.push([x0+t*span, y+Math.sin(t*Math.PI)*depth]);
+    }
+  }
+  return pts;
+}
+function dot(cx,cy){return [[cx,cy]];}
+
+function resample(pts,n){
+  if(pts.length===1){const p=pts[0];return Array.from({length:n},()=>[p[0],p[1]]);}
+  const seg=[]; let total=0;
+  for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(d);total+=d;}
+  if(total===0){const p=pts[0];return Array.from({length:n},()=>[p[0],p[1]]);}
+  const out=[[pts[0][0],pts[0][1]]]; const stepL=total/(n-1);
+  let i=1,acc=0,prev=pts[0];
+  for(let s=1;s<n-1;s++){
+    let target=s*stepL;
+    while(acc+seg[i-1]<target && i<pts.length-1){acc+=seg[i-1];prev=pts[i];i++;}
+    const segLen=seg[i-1]||1; const f=(target-acc)/segLen;
+    out.push([prev[0]+(pts[i][0]-prev[0])*f, prev[1]+(pts[i][1]-prev[1])*f]);
+  }
+  out.push([pts[pts.length-1][0],pts[pts.length-1][1]]);
+  return out;
+}
+function strokeExtent(arr){let a=1e9,b=-1e9,c=1e9,d=-1e9;for(const p of arr){if(p[0]<a)a=p[0];if(p[0]>b)b=p[0];if(p[1]<c)c=p[1];if(p[1]>d)d=p[1];}return Math.max(b-a,d-c);}
+function strokeMid(arr){let x=0,y=0;for(const p of arr){x+=p[0];y+=p[1];}return [x/arr.length,y/arr.length];}
+function buildDesign(name,wcm,hcm,dcm,rawStrokes,cdot){
+  const strokes=[],ext=[],mid=[];
+  for(let i=0;i<SLOTS;i++){
+    const s=rawStrokes[i]||dot(cdot[0],cdot[1]);
+    const rs=resample(s,N);
+    strokes.push(rs); ext.push(strokeExtent(rs)); mid.push(strokeMid(rs));
+  }
+  return {name,wcm,hcm,dcm,strokes,ext,mid};
+}
+
+/* ---------- 3D pieces (isometric) ---------- */
+// TABLE
+const tFL=[170,250],tFR=[440,250],tt=16;
+const D_TABLE=buildDesign("TABLE",1200,500,700,[
+  loop([tFL,tFR,A2(tFR),A2(tFL)],4,2),                       // top face
+  wavy(tFL[0],tFL[1]+tt,tFR[0],tFR[1]+tt,3,4,0.2,30),         // front edge
+  wavy(tFR[0],tFR[1]+tt,A2(tFR)[0],A2(tFR)[1]+tt,3,2,0,16),   // right edge depth
+  wavy(tFL[0],tFL[1]+tt,165,FLOOR,4,1,0,26),                  // leg front-L
+  wavy(tFR[0],tFR[1]+tt,445,FLOOR,4,1,Math.PI,26),            // leg front-R
+  wavy(A2(tFL)[0],A2(tFL)[1]+tt,A2(tFL)[0],FLOOR+DY,4,1,0.5,24),   // leg back-L
+  wavy(A2(tFR)[0],A2(tFR)[1]+tt,A2(tFR)[0],FLOOR+DY,4,1,2.0,24),   // leg back-R
+],[305,360]);
+
+// BENCH
+const bFL=[140,300],bFR=[470,300],bt=16;
+const D_BENCH=buildDesign("BENCH",920,300,360,[
+  loop([bFL,bFR,A2(bFR),A2(bFL)],5,3),
+  wavy(bFL[0],bFL[1]+bt,bFR[0],bFR[1]+bt,4,5,0.2,32),
+  wavy(bFR[0],bFR[1]+bt,A2(bFR)[0],A2(bFR)[1]+bt,3,2,0,16),
+  wavy(bFL[0]+36,bFL[1]+bt,bFL[0]+30,FLOOR,5,1.2,0,26),       // leg panel front-L
+  wavy(bFR[0]-36,bFR[1]+bt,bFR[0]-30,FLOOR,5,1.2,Math.PI,26), // leg panel front-R
+  wavy(A2(bFL)[0]+36,A2(bFL)[1]+bt,A2(bFL)[0]+30,FLOOR+DY,4,1,0.6,22),
+  wavy(A2(bFR)[0]-36,A2(bFR)[1]+bt,A2(bFR)[0]-30,FLOOR+DY,4,1,1.8,22),
+],[305,360]);
+
+// STOOL (round seat + tripod)
+const sc=[300,212];
+const D_STOOL=buildDesign("STOOL",340,620,340,[
+  ellipseLoop(sc[0],sc[1],94,30,4,3,46),                     // seat top rim
+  arcFront(sc[0],sc[1]+15,94,30,24),                         // seat thickness (front)
+  wavy(262,sc[1]+24,250,FLOOR,16,3,0,30),                    // leg front-L (splay)
+  wavy(338,sc[1]+24,352,FLOOR,16,3,Math.PI,30),              // leg front-R
+  wavy(sc[0]+22,sc[1]+18,sc[0]+34,FLOOR+DY,12,2.4,0.4,28),   // leg back (up-right)
+  wavy(250,FLOOR,352,FLOOR,3,2,0,18),                        // foot
+],[300,360]);
+
+// CHAIR (seat + 4 legs + backrest at back)
+const cFL=[218,318],cFR=[386,318],ct=14, cBackTopY=150;
+const D_CHAIR=buildDesign("CHAIR",460,880,480,[
+  loop([cFL,cFR,A2(cFR),A2(cFL)],4,2),                       // seat top
+  wavy(cFL[0],cFL[1]+ct,cFR[0],cFR[1]+ct,3,4,0.2,28),        // seat front edge
+  wavy(cFR[0],cFR[1]+ct,A2(cFR)[0],A2(cFR)[1]+ct,3,2,0,16),  // seat right edge
+  wavy(cFL[0],cFL[1]+ct,214,FLOOR,5,1.3,0,26),               // leg front-L
+  wavy(cFR[0],cFR[1]+ct,390,FLOOR,5,1.3,Math.PI,26),         // leg front-R
+  wavy(A2(cFL)[0],A2(cFL)[1]+ct,A2(cFL)[0],FLOOR+DY,4,1.1,0.5,24), // leg back-L
+  wavy(A2(cFR)[0],A2(cFR)[1]+ct,A2(cFR)[0],FLOOR+DY,4,1.1,1.9,24), // leg back-R
+  wavy(A2(cFL)[0],A2(cFL)[1],A2(cFL)[0],cBackTopY+DY,7,2.4,0,28),  // backrest upright-L
+  wavy(A2(cFR)[0],A2(cFR)[1],A2(cFR)[0],cBackTopY+DY,7,2.4,Math.PI,28), // backrest upright-R
+  wavy(A2(cFL)[0],cBackTopY+DY,A2(cFR)[0],cBackTopY+DY,5,3,0.2,26),     // backrest top rail
+],[302,330]);
+
+// SHELF (long wall plank with a scalloped wavy bottom edge — the real piece)
+const shL=112,shR=486,shTop=302,shBase=372, sdx=24, sdy=-14;  // shallower depth for a thin plank
+const D_SHELF=buildDesign("SHELF",1400,170,220,[
+  wavy(shL,shTop,shR,shTop,4,5,0.3,42),                       // top edge (front)
+  scallop(shL,shR,shBase,6,22),                               // scalloped bottom edge
+  wavy(shL,shTop,shL,shBase,2,1,0,10),                        // left end cap
+  wavy(shR,shTop,shR,shBase,2,1,0,10),                        // right end cap
+  wavy(shL+sdx,shTop+sdy,shR+sdx,shTop+sdy,4,5,0.3,42),       // top back edge (3D)
+  wavy(shL,shTop,shL+sdx,shTop+sdy,2,1,0,12),                 // left depth
+  wavy(shR,shTop,shR+sdx,shTop+sdy,2,1,0,12),                 // right depth
+],[300,340]);
+
+const DESIGNS=[D_STOOL,D_BENCH,D_TABLE,D_CHAIR,D_SHELF];
+
+/* ---------- DOM ---------- */
+const gFur=document.getElementById('furniture');
+const paths=[];                              // 2 jittered copies per slot = sketch look
+for(let i=0;i<SLOTS*2;i++){
+  const p=document.createElementNS(NS,'path');
+  p.setAttribute('class','fpath');
+  p.setAttribute('stroke-width',(i%2?1.1:1.6).toFixed(1));
+  gFur.appendChild(p); paths.push(p);
+}
+const gDims=document.getElementById('dims');
+function mkLine(){const l=document.createElementNS(NS,'line');l.setAttribute('class','dim');gDims.appendChild(l);return l;}
+function mkText(anchor){const t=document.createElementNS(NS,'text');t.setAttribute('class','dimtxt');t.setAttribute('text-anchor',anchor);gDims.appendChild(t);return t;}
+const wL=mkLine(),wA=mkLine(),wB=mkLine(),wT=mkText('middle');
+const hL=mkLine(),hA=mkLine(),hB=mkLine(),hT=mkText('start');
+
+/* fluent steady-hand pencil: each copy weaves smoothly along the line normal */
+
+/* ---------- animation ---------- */
+const easeInOut=t=>t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const clamp01=v=>v<0?0:v>1?1:v;
+const STAG=0.42;
+const MORPH=1800, HOLD=250, SEG=MORPH+HOLD, TOTAL=SEG*DESIGNS.length;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let start=performance.now();
+
+function frame(now){
+  let tn=(now-start)%TOTAL;
+  const seg=Math.floor(tn/SEG)%DESIGNS.length;
+  const within=tn-seg*SEG;
+  const raw=within<MORPH?within/MORPH:1;
+  const t=easeInOut(raw);
+  const A=DESIGNS[seg] || DESIGNS[0], B=DESIGNS[(seg+1)%DESIGNS.length] || DESIGNS[0];
+
+  let GX0=1e9,GX1=-1e9,GY0=1e9,GY1=-1e9;
+  for(let s=0;s<SLOTS;s++){
+    const realA=((A.ext && A.ext[s]) || 0)>6, realB=((B.ext && B.ext[s]) || 0)>6;
+    if(!realA && !realB){ paths[s*2].setAttribute('d','');paths[s*2+1].setAttribute('d',''); continue; }
+    const off=(s/(SLOTS-1))*STAG;
+    const lts=easeInOut(clamp01((raw-off)/(1-STAG)));
+    const swell=Math.sin(Math.PI*lts);
+    let a=A.strokes[s], b=B.strokes[s], op=1;
+    if(realA && !realB){ const m=A.mid[s]; b=Array.from({length:N},()=>[m[0],m[1]]); op=clamp01(1-lts*1.7); }
+    else if(!realA && realB){ const m=B.mid[s]; a=Array.from({length:N},()=>[m[0],m[1]]); op=clamp01((lts-0.4)*1.7); }
+
+    // compute morphed (rippled) points once
+    const P=new Array(N);
+    let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;
+    for(let k=0;k<N;k++){
+      let x=a[k][0]+(b[k][0]-a[k][0])*lts;
+      let y=a[k][1]+(b[k][1]-a[k][1])*lts;
+      const mvx=b[k][0]-a[k][0], mvy=b[k][1]-a[k][1];
+      const ml=Math.hypot(mvx,mvy);
+      if(ml>1){
+        const nx=-mvy/ml, ny=mvx/ml;
+        const amp=swell*Math.min(15,ml*0.11)*Math.sin(k/N*Math.PI*2.5+seg*1.3+s*0.5);
+        x+=nx*amp; y+=ny*amp;
+      }
+      P[k]=[x,y];
+      if(x<mnx)mnx=x; if(x>mxx)mxx=x; if(y<mny)mny=y; if(y>mxy)mxy=y;
+    }
+    const tiny=(mxx-mnx<4 && mxy-mny<4);
+    // two fluent pencil copies: smooth low-frequency wander along the normal, tapered at ends
+    for(let c=0;c<2;c++){
+      const pe=paths[s*2+c];
+      if(tiny){ pe.setAttribute('d',''); continue; }
+      const phase=(c?2.3:0.7)+s*0.5, freq=(c?2.2:1.5), bias=(c?1.0:-1.0), amp=1.7;
+      let d='M';
+      for(let k=0;k<N;k++){
+        const pa=P[Math.max(0,k-1)], pb=P[Math.min(N-1,k+1)];
+        const tx=pb[0]-pa[0], ty=pb[1]-pa[1], tl=Math.hypot(tx,ty)||1;
+        const nx=-ty/tl, ny=tx/tl;
+        const tp=k/(N-1);
+        const env=0.4+0.6*Math.sin(tp*Math.PI);
+        const off=(bias+amp*Math.sin(tp*freq*Math.PI*2+phase))*env;
+        d+=(k?'L':'')+(P[k][0]+nx*off).toFixed(1)+' '+(P[k][1]+ny*off).toFixed(1)+' ';
+      }
+      pe.setAttribute('d',d);
+      pe.setAttribute('stroke-opacity',(op*0.6).toFixed(2));
+    }
+    if(!tiny && op>0.55){ if(mnx<GX0)GX0=mnx; if(mxx>GX1)GX1=mxx; if(mny<GY0)GY0=mny; if(mxy>GY1)GY1=mxy; }
+  }
+
+  // ---- dimension lines (no W/H letters) ----
+  const dy=GY1+26;
+  wL.setAttribute('x1',GX0);wL.setAttribute('y1',dy);wL.setAttribute('x2',GX1);wL.setAttribute('y2',dy);
+  wA.setAttribute('x1',GX0);wA.setAttribute('y1',dy-6);wA.setAttribute('x2',GX0);wA.setAttribute('y2',dy+6);
+  wB.setAttribute('x1',GX1);wB.setAttribute('y1',dy-6);wB.setAttribute('x2',GX1);wB.setAttribute('y2',dy+6);
+  const wv=Math.round(A.wcm+(B.wcm-A.wcm)*t);
+  wT.setAttribute('x',(GX0+GX1)/2);wT.setAttribute('y',dy+19);wT.textContent=wv+' mm';
+  const dx2=GX1+26;
+  hL.setAttribute('x1',dx2);hL.setAttribute('y1',GY0);hL.setAttribute('x2',dx2);hL.setAttribute('y2',GY1);
+  hA.setAttribute('x1',dx2-6);hA.setAttribute('y1',GY0);hA.setAttribute('x2',dx2+6);hA.setAttribute('y2',GY0);
+  hB.setAttribute('x1',dx2-6);hB.setAttribute('y1',GY1);hB.setAttribute('x2',dx2+6);hB.setAttribute('y2',GY1);
+  const hv=Math.round(A.hcm+(B.hcm-A.hcm)*t);
+  hT.setAttribute('x',dx2+11);hT.setAttribute('y',(GY0+GY1)/2+4);hT.textContent=hv+' mm';
+
+  if(!reduce) requestAnimationFrame(frame);
+}
+// draw the first pose immediately (so it's never blank, even if rAF is throttled
+// while off-screen), then frame() self-schedules the loop unless reduced-motion.
+frame(performance.now());
+</script>
+
+
+</body></html>

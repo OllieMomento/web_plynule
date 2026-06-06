@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Plynule — from tree to stool [stůl] (eventually)</title>
+<title>Plynule — from tree to stool [stůl]</title>
 <script>document.documentElement.classList.add('js');</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -23,7 +23,8 @@
 <script type="text/babel" src="js/scenes-a.jsx"></script>
 <script type="text/babel" src="js/scenes-b.jsx"></script>
 <script type="text/babel" src="js/story.jsx"></script>
-<script type="text/babel" src="js/feed.jsx"></script>
+<script type="text/babel" src="js/feed.jsx?v=polaroids-process"></script>
+<script type="text/babel" src="js/grain.jsx"></script>
 
 <script type="text/babel">
 const { useState, useEffect } = React;
@@ -31,15 +32,13 @@ const IG = "https://www.instagram.com/plynule/";
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "accent": [
-    "#FF5DA2",
-    "#15110B"
+    "#E0512F",
+    "#FFFFFF"
   ],
   "paper": [
-    "#F2ECE0",
-    "#E8DECB"
-  ],
-  "speed": 0.9,
-  "columns": "2"
+    "#FFFEFA",
+    "#FAF6EE"
+  ]
 }/*EDITMODE-END*/;
 
 function IgGlyph({ size = 16 }) {
@@ -52,7 +51,14 @@ function IgGlyph({ size = 16 }) {
   );
 }
 function Logo({ h = 40 }) {
-  return <video src="assets/PlynuleLogo.mp4" autoPlay muted loop playsInline style={{ height: h }} />;
+  return (
+    <span className="logo-video-wrap" style={{ '--logo-h': `${h}px` }}>
+      <canvas className="logo-canvas" aria-hidden="true"></canvas>
+      <video className="logo-video" autoPlay loop muted playsInline preload="auto" aria-hidden="true">
+        <source src="assets/logo.webm" type="video/webm" />
+      </video>
+    </span>
+  );
 }
 
 const MARQUEE = ['Handmade', 'Air-dried 4 years', 'No screws', 'One of one', 'Fine oils only', "Mates\u2019 rates"];
@@ -85,17 +91,10 @@ function NewsTicker({ className = "" }) {
   );
 }
 
-function MakerCard({ variant, beard }) {
-  return (
-    <div className="reveal-card">
-      <svg viewBox="0 0 64 126"><Friend variant={variant} pose="wave" beard={beard} /></svg>
-    </div>
-  );
-}
-
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const r = document.documentElement;
@@ -111,66 +110,127 @@ function App() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Italicise the brand letters (p,l,y,n,u,l,e → "plynule") inside headlines
   useEffect(() => {
-    const HEADLINE_SELECTORS = '.display, .cta-display, .secnum .l, .pl-readout h3, .maker .mname, .makers-lead, .pl-post-cap';
-    const BRAND_RE = /[plynue]/i;
+    const renderLogo = (video) => {
+      const wrap = video.closest('.logo-video-wrap');
+      const canvas = wrap && wrap.querySelector('.logo-canvas');
+      if (!canvas || video.dataset.chromaStarted === '1') return;
+      video.dataset.chromaStarted = '1';
 
-    function wrap(el) {
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      let raf = 0;
+
+      const sizeCanvas = () => {
+        if (!video.videoWidth || !video.videoHeight) return false;
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+        }
+        return true;
+      };
+
+      const draw = () => {
+        if (sizeCanvas() && video.readyState >= 2) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = frame.data;
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i + 1], b = data[i + 2];
+            if (r > 230 && g > 230 && b > 230) {
+              data[i + 3] = 0;
+            }
+          }
+          ctx.putImageData(frame, 0, 0);
+        }
+        raf = requestAnimationFrame(draw);
+      };
+
+      video.addEventListener('loadedmetadata', sizeCanvas, { once: true });
+      draw();
+    };
+
+    const playLogos = () => {
+      document.querySelectorAll('.logo-video').forEach(video => {
+        video.muted = true;
+        video.play().catch(() => {});
+        renderLogo(video);
+      });
+    };
+    const raf = requestAnimationFrame(playLogos);
+    const tid = setTimeout(playLogos, 250);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(tid);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    document.body.classList.toggle('menu-open', menuOpen);
+    return () => document.body.classList.remove('menu-open');
+  }, [menuOpen]);
+
+  useEffect(() => {
+    const headlineSelectors = '.display, .cta-display, .secnum .l, .pl-readout h3, .maker .mname, .makers-lead, .pl-post-cap, .menu-links a, .marquee-track';
+    const brandLetters = /[plynue]/i;
+
+    function wrapBrandLetters(el) {
       if (!el || el.dataset.brandWrapped === '1') return;
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
-        acceptNode(n) {
-          const p = n.parentNode;
-          if (p && p.classList && p.classList.contains('brand-letter')) return NodeFilter.FILTER_REJECT;
+        acceptNode(node) {
+          const parent = node.parentNode;
+          if (parent && parent.classList && parent.classList.contains('brand-letter')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (parent && parent.closest && parent.closest('.translation')) {
+            return NodeFilter.FILTER_REJECT;
+          }
           return NodeFilter.FILTER_ACCEPT;
         }
       });
       const nodes = [];
-      let n;
-      while ((n = walker.nextNode())) nodes.push(n);
-      nodes.forEach(node => {
-        const text = node.nodeValue;
-        if (!BRAND_RE.test(text)) return;
+      let node;
+      while ((node = walker.nextNode())) nodes.push(node);
+
+      nodes.forEach(textNode => {
+        const text = textNode.nodeValue;
+        if (!brandLetters.test(text)) return;
         const frag = document.createDocumentFragment();
-        let buf = '';
         for (const ch of text) {
-          if (BRAND_RE.test(ch)) {
-            if (buf) { frag.appendChild(document.createTextNode(buf)); buf = ''; }
-            const s = document.createElement('span');
-            s.className = 'brand-letter';
-            s.textContent = ch;
-            frag.appendChild(s);
+          if (brandLetters.test(ch)) {
+            const span = document.createElement('span');
+            span.className = 'brand-letter';
+            span.textContent = ch;
+            frag.appendChild(span);
           } else {
-            buf += ch;
+            frag.appendChild(document.createTextNode(ch));
           }
         }
-        if (buf) frag.appendChild(document.createTextNode(buf));
-        node.parentNode.replaceChild(frag, node);
+        textNode.parentNode.replaceChild(frag, textNode);
       });
       el.dataset.brandWrapped = '1';
     }
 
-    const runAll = () => document.querySelectorAll(HEADLINE_SELECTORS).forEach(wrap);
-
-    // initial pass after Story has had a tick to mount
-    const tid = setTimeout(runAll, 0);
-
-    // Story swaps the scene title (.pl-readout h3) on each slide change — watch it
+    const wrapAll = () => document.querySelectorAll(headlineSelectors).forEach(wrapBrandLetters);
+    const tid = setTimeout(wrapAll, 0);
     const readout = document.querySelector('.pl-readout');
-    let mo;
+    let observer;
+
     if (readout && 'MutationObserver' in window) {
-      mo = new MutationObserver(() => {
-        mo.disconnect();
-        const h3 = readout.querySelector('h3');
-        if (h3) { delete h3.dataset.brandWrapped; wrap(h3); }
-        mo.observe(readout, { childList: true, subtree: true, characterData: true });
+      observer = new MutationObserver(() => {
+        observer.disconnect();
+        const title = readout.querySelector('h3');
+        if (title) {
+          delete title.dataset.brandWrapped;
+          wrapBrandLetters(title);
+        }
+        observer.observe(readout, { childList: true, subtree: true, characterData: true });
       });
-      mo.observe(readout, { childList: true, subtree: true, characterData: true });
+      observer.observe(readout, { childList: true, subtree: true, characterData: true });
     }
 
     return () => {
       clearTimeout(tid);
-      mo && mo.disconnect();
+      observer && observer.disconnect();
     };
   }, []);
 
@@ -195,96 +255,93 @@ function App() {
     return () => { io && io.disconnect(); cancelAnimationFrame(raf); clearTimeout(safety); };
   }, []);
 
-  const pace = 1 / t.speed;
-  const cols = Number(t.columns);
-
-  const makers = [
-    { name: 'Ollie', role: 'fells, swears, air-dries', variant: 'A', beard: 0 },
-    { name: 'Filip', role: 'draws, doubts, oils', variant: 'B', beard: 0 },
+  const menuItems = [
+    { label: "Let's talk", href: '#contact', kicker: '01' },
   ];
 
   return (
     <React.Fragment>
+      <GrainBackdrop />
       {/* NAV */}
       <nav className={'nav' + (scrolled ? ' scrolled' : '')}>
-        <a href="#top" className="nav-logo" aria-label="Plynule home"><Logo h={40} /></a>
-        <div className="nav-links">
-          <a className="nav-link" href="#story">Story</a>
-          <a className="nav-link" href="#feed">Feed</a>
-          <a className="nav-link" href="#makers">Makers</a>
-          <a className="nav-link btn accent" href="#contact">Let's talk</a>
-        </div>
+        <a href="#top" className="nav-logo" aria-label="Plynule home" onClick={() => setMenuOpen(false)}><Logo h={52} /></a>
+        <button
+          className={'doorbtn' + (menuOpen ? ' is-open' : '')}
+          type="button"
+          aria-label="Toggle navigation"
+          aria-expanded={menuOpen}
+          aria-pressed={menuOpen}
+          onClick={() => setMenuOpen(v => !v)}
+        >
+          <span className="door-scene">
+            <span className="door-panel"><span className="door-x"></span></span>
+            <span className="door-leaf"><span className="door-dot"></span></span>
+          </span>
+        </button>
       </nav>
+
+      <div className={'menu-panel' + (menuOpen ? ' is-open' : '')} aria-hidden={!menuOpen}>
+        <div className="menu-panel-inner">
+          <div className="menu-grid">
+            <div className="menu-brand">
+              <Logo h={92} />
+              <p>Furniture from patience, jokes, and wood that took its time.</p>
+            </div>
+            <div className="menu-links">
+              {menuItems.map(item => (
+                <a key={item.href} href={item.href} onClick={() => setMenuOpen(false)}>
+                  <span>{item.kicker}</span>
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </div>
+          <div className="menu-bottom">
+            <span className="kick">Plynule · smoothly, without interruption</span>
+            <a href={IG} target="_blank" rel="noopener" onClick={() => setMenuOpen(false)}><IgGlyph /> @plynule</a>
+          </div>
+        </div>
+      </div>
 
       {/* HERO */}
       <header className="hero wrap" id="top" data-screen-label="Hero">
-        <div className="hero-top">
-          <span className="kick reveal">Est. one borrowed saw</span>
-          <span className="kick reveal" style={{ '--i': 1 }}>Two friends · zero screws</span>
-        </div>
         <h1 className="display hero-display">
           <span className="line-mask"><span>From tree</span></span>
-          <span className="line-mask" style={{ '--i': 1 }}><span>to stool [stůl]</span></span>
-          <span className="line-mask" style={{ '--i': 2 }}><span className="acc">(eventually)</span></span>
+          <span className="line-mask" style={{ '--i': 1 }}><span>to stool <span className="translation">[:stůl]</span></span></span>
         </h1>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-          <p className="hero-sub reveal" style={{ '--i': 2 }}>Plynule is a two-person furniture workshop. One tree, four years of patience, and absolutely no rush. Here's the whole, slightly ridiculous process — start to finish.</p>
+          <p className="hero-sub reveal" style={{ '--i': 2 }}>We’re Duo Plynule. We start with the tree, make a lot of sawdust, have fun, sand a lot, and stay with each piece until the top coat of oil.</p>
         </div>
 
-        <section id="story" data-screen-label="Story" className="reveal">
-          <Story pace={pace} accent={t.accent[0]} />
+        <div className="reveal"><PolaroidStrip /></div>
+
+        <section className="custom-morph reveal" aria-label="Custom furniture">
+          <div className="custom-copy">
+            <span className="kick">Custom things, our way</span>
+            <h2 className="custom-title">Our idea. Or yours.</h2>
+            <p>
+              We make things we dream up along the way, and things you bring to us.
+              Custom pieces that start as a sentence over coffee and end up as something real.
+            </p>
+          </div>
+          <div className="morph-box" aria-hidden="true">
+            <div className="morph-frame">
+              <iframe
+                title="Morphing furniture sketch"
+                src="assets/furniture-morph-embed.html"
+                loading="lazy"
+              ></iframe>
+            </div>
+          </div>
         </section>
+
       </header>
 
-      <NewsTicker className="-m-7" />
-      <Marquee lime />
-
-      {/* FEED — 02 */}
-      <section className="section" id="feed" data-screen-label="Feed">
-        <div className="wrap">
-          <div className="secnum reveal">
-            <span className="n">02</span>
-            <span className="l">From the bench</span>
-            <span className="note">Photos straight off the workshop floor — updated as we post.</span>
-          </div>
-          <div className="feed-bar reveal">
-            <span className="feed-handle"><IgGlyph size={24} /> @plynule</span>
-            <span className="feed-live"><span className="dot"></span> Live from the shop</span>
-            <a className="btn ghost" href={IG} target="_blank" rel="noopener">See it all</a>
-          </div>
-          <div className="reveal"><Feed columns={cols} /></div>
-          <p className="feed-foot hand" style={{ fontSize: 22, color: 'var(--ink-soft)' }}>drag your own photos onto any frame — they stick ✶</p>
-        </div>
-      </section>
-
-      <Marquee />
-
-      {/* MAKERS — 03 */}
-      <section className="section" id="makers" data-screen-label="Makers">
-        <div className="wrap">
-          <div className="secnum reveal">
-            <span className="n">03</span>
-            <span className="l">The makers</span>
-            <span className="note">Two friends who liked wood a normal amount — then way too much.</span>
-          </div>
-          <p className="makers-copy reveal">It started with one tree and a borrowed saw. The plan was a single coffee table. Four years of drying later, we make a handful of pieces a year — each from timber we know by name.</p>
-          <div className="makers reveal">
-            {makers.map(m => (
-              <div className="maker" key={m.name}>
-                <span className="mname">{m.name}</span>
-                <MakerCard variant={m.variant} beard={m.beard} />
-                <span className="mrole">{m.role}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CONTACT — 04 */}
+      {/* CONTACT — 01 */}
       <section className="section dark" id="contact" data-screen-label="Contact">
         <div className="wrap">
           <div className="secnum reveal">
-            <span className="n">04</span>
+            <span className="n">01</span>
             <span className="l">Let's talk</span>
             <span className="note">Tell us what you're after and which corner of the room it's for.</span>
           </div>
@@ -299,10 +356,19 @@ function App() {
       {/* FOOTER */}
       <footer className="foot">
         <div className="foot-grid">
-          <Logo h={34} />
-          <span className="czk"><strong>plynule</strong> <span className="hand" style={{ fontSize: 18 }}>(adv.)</span> — smoothly, fluently, without interruption.</span>
-          <a href={IG} target="_blank" rel="noopener" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}><IgGlyph /> @plynule</a>
-          <span className="czk">© {new Date().getFullYear()} Plynule</span>
+          <div className="foot-brand">
+            <Logo h={42} />
+            <p><strong>plynule</strong> <span className="hand">(adv.)</span> smoothly, fluently, without interruption.</p>
+          </div>
+          <div className="foot-contact" aria-label="Contact links">
+            <a href={IG} target="_blank" rel="noopener"><span>Instagram</span><span>@plynule</span></a>
+            <a href="mailto:hello@plynule.com"><span>Email</span><span>hello@plynule.com</span></a>
+            <a href="https://www.linkedin.com/company/plynule/" target="_blank" rel="noopener"><span>LinkedIn</span><span>Plynule</span></a>
+          </div>
+          <div className="foot-bottom">
+            <span>© {new Date().getFullYear()} Plynule</span>
+            <span>Praha, CZ</span>
+          </div>
         </div>
       </footer>
 
@@ -310,16 +376,11 @@ function App() {
       <TweaksPanel>
         <TweakSection label="Look" />
         <TweakColor label="Accent" value={t.accent}
-          options={[['#C8F23E', '#15110B'], ['#2E6BFF', '#FFFFFF'], ['#E0512F', '#FFFFFF'], ['#FF5DA2', '#15110B']]}
+          options={[['#E0512F', '#FFFFFF'], ['#C8F23E', '#15110B'], ['#2E6BFF', '#FFFFFF'], ['#FF5DA2', '#15110B']]}
           onChange={(v) => setTweak('accent', v)} />
         <TweakColor label="Paper tone" value={t.paper}
           options={[['#ECE4D2', '#E4D9C0'], ['#EFEAE0', '#E5DDCC'], ['#E9E7DA', '#DCD9C6'], ['#F2ECE0', '#E8DECB']]}
           onChange={(v) => setTweak('paper', v)} />
-        <TweakSection label="Motion & layout" />
-        <TweakSlider label="Story speed" value={t.speed} min={0.6} max={1.8} step={0.1} unit="×"
-          onChange={(v) => setTweak('speed', v)} />
-        <TweakRadio label="Feed columns" value={t.columns} options={['2', '3', '4']}
-          onChange={(v) => setTweak('columns', v)} />
       </TweaksPanel>
     </React.Fragment>
   );

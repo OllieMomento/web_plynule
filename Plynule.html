@@ -48,7 +48,11 @@ function IgGlyph({ size = 18 }) {
 }
 
 function Logo({ h = 42 }) {
-  return <video src="assets/PlynuleLogo.mp4" autoPlay muted loop playsInline style={{ height: h }} />;
+  return (
+    <video autoPlay loop muted playsInline style={{ height: h, mixBlendMode: 'multiply' }}>
+      <source src="assets/logo.webm" type="video/webm" />
+    </video>
+  );
 }
 
 function App() {
