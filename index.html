@@ -7,7 +7,7 @@
 <script>document.documentElement.classList.add('js');</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="styles-v2.css?v=20260606-instagram-api" />
+<link rel="stylesheet" href="styles-v2.css?v=20260606-pages-menu" />
 </head>
 <body>
 <div id="app"></div>
@@ -75,81 +75,6 @@ function LinkedInGlyph({ size = 18 }) {
     </svg>
   );
 }
-function GlassRuler() {
-  const cm = 15;
-  const x0 = 58;
-  const x1 = 770;
-  const ppc = (x1 - x0) / cm;
-  const ticks = [];
-  for (let c = 0; c <= cm; c += 1) {
-    const x = x0 + c * ppc;
-    if (c < cm) {
-      for (let m = 1; m < 10; m += 1) {
-        ticks.push({ key: `m-${c}-${m}`, x: x + m * (ppc / 10), h: m === 5 ? 20 : 12, w: 1 });
-      }
-    }
-    ticks.push({ key: `c-${c}`, x, h: 30, w: 1.6, label: c });
-  }
-
-  return (
-    <div className="menu-ruler" aria-hidden="true">
-      <div className="menu-ruler-glass"></div>
-      <svg viewBox="0 0 800 175" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="rulerBodyTint" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#ffffff" stopOpacity="0.30" />
-            <stop offset="0.12" stopColor="#ffffff" stopOpacity="0.10" />
-            <stop offset="0.5" stopColor="#dfeefc" stopOpacity="0.05" />
-            <stop offset="0.86" stopColor="#ffffff" stopOpacity="0.09" />
-            <stop offset="1" stopColor="#ffffff" stopOpacity="0.26" />
-          </linearGradient>
-          <linearGradient id="rulerTopBevel" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#ffffff" stopOpacity="0.85" />
-            <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="rulerBotBevel" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0" stopColor="#ffffff" stopOpacity="0.60" />
-            <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="rulerStreak" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#ffffff" stopOpacity="0" />
-            <stop offset="0.36" stopColor="#ffffff" stopOpacity="0" />
-            <stop offset="0.44" stopColor="#ffffff" stopOpacity="0.50" />
-            <stop offset="0.5" stopColor="#ffffff" stopOpacity="0" />
-            <stop offset="0.62" stopColor="#ffffff" stopOpacity="0.32" />
-            <stop offset="0.7" stopColor="#ffffff" stopOpacity="0" />
-          </linearGradient>
-          <clipPath id="rulerBodyClip">
-            <rect x="6" y="35" width="788" height="105" rx="14" />
-          </clipPath>
-        </defs>
-        <g clipPath="url(#rulerBodyClip)">
-          <rect x="6" y="35" width="788" height="105" rx="14" fill="url(#rulerBodyTint)" />
-          <rect x="6" y="35" width="788" height="16" fill="url(#rulerTopBevel)" />
-          <rect x="6" y="124" width="788" height="16" fill="url(#rulerBotBevel)" />
-          <rect x="6" y="121" width="788" height="2.5" fill="#ffffff" opacity="0.4" />
-          <rect x="6" y="118" width="788" height="1.5" fill="#5b7da6" opacity="0.18" />
-          <rect x="6" y="35" width="788" height="105" fill="url(#rulerStreak)" />
-        </g>
-        <rect x="6" y="35" width="788" height="105" rx="14" fill="none" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="1.4" />
-        <rect x="7.5" y="36.5" width="785" height="102" rx="12.5" fill="none" stroke="#15110B" strokeOpacity="0.18" strokeWidth="1" />
-        <circle cx="48" cy="100" r="9" fill="#000" fillOpacity="0.10" />
-        <circle cx="48" cy="100" r="9" fill="none" stroke="#ffffff" strokeOpacity="0.70" strokeWidth="1.4" />
-        <circle cx="45.5" cy="97.5" r="2.4" fill="#ffffff" fillOpacity="0.75" />
-        <g fill="#15110B">
-          {ticks.map(tick => (
-            <React.Fragment key={tick.key}>
-              <line x1={tick.x} y1="46" x2={tick.x} y2={46 + tick.h} stroke="#15110B" strokeWidth={tick.w} strokeOpacity="0.82" />
-              {tick.label !== undefined && (
-                <text x={tick.x} y="98" textAnchor="middle" fontSize="21" fontWeight="600" fontFamily="Helvetica, Arial, sans-serif" fill="#15110B" fillOpacity="0.9">{tick.label}</text>
-              )}
-            </React.Fragment>
-          ))}
-        </g>
-      </svg>
-    </div>
-  );
-}
 function Logo({ h = 40 }) {
   return (
     <span className="logo-video-wrap" style={{ '--logo-h': `${h}px` }}>
@@ -187,48 +112,6 @@ function NewsTicker({ className = "" }) {
   return (
     <div className={'marquee ' + className} aria-hidden="true">
       <div className="marquee-track"><span>{content}</span></div>
-    </div>
-  );
-}
-
-const IG_FALLBACK_PHOTOS = [
-  { src: 'assets/feed/ig1.jpg', url: IG },
-  { src: 'assets/feed/ig2.jpg', url: IG },
-  { src: 'assets/feed/ig3.jpg', url: IG },
-  { src: 'assets/feed/ig4.jpg', url: IG },
-  { src: 'assets/feed/ig5.jpg', url: IG },
-];
-function InstagramLatest() {
-  const [photos, setPhotos] = useState(IG_FALLBACK_PHOTOS);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('assets/instagram-feed.json?v=20260606', { cache: 'no-store' })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (cancelled || !data) return;
-        const items = Array.isArray(data) ? data : data.items;
-        const next = (items || [])
-          .map(item => ({
-            src: item.media_url || item.thumbnail_url || item.src,
-            url: item.permalink || item.url || IG,
-            alt: item.alt || item.caption || 'Plynule Instagram photo',
-          }))
-          .filter(item => item.src)
-          .slice(0, 5);
-        if (next.length) setPhotos(next);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
-
-  return (
-    <div className="ig-latest" aria-label="Latest Instagram photos">
-      {photos.slice(0, 5).map((photo, i) => (
-        <a className="ig-latest-card" href={photo.url || IG} target="_blank" rel="noopener" key={`${photo.src}-${i}`}>
-          <img src={photo.src} alt={photo.alt || 'Plynule Instagram photo'} loading="lazy" />
-        </a>
-      ))}
     </div>
   );
 }
@@ -312,8 +195,8 @@ function App() {
   }, [menuOpen]);
 
   useEffect(() => {
-    const headlineSelectors = '.display, .cta-display, .secnum .l, .pl-readout h3, .maker .mname, .makers-lead, .pl-post-cap, .menu-links a, .marquee-track';
-    const brandLetters = /[plynue]/i;
+    const headlineSelectors = 'h1, h2, h3, .display, .custom-title, .cta-display, .secnum .l, .pl-readout h3, .maker .mname, .makers-lead, .pl-post-cap, .menu-links a, .menu-links-light a, .page-title, .marquee-track';
+    const brandLetters = /[plynule]/i;
 
     function wrapBrandLetters(el) {
       if (!el || el.dataset.brandWrapped === '1') return;
@@ -423,14 +306,20 @@ function App() {
           <div className="menu-grid">
             <div className="menu-brand">
               <Logo h={92} />
-              <p>Furniture from patience, jokes, and wood that took its time.</p>
+            </div>
+            <div className="menu-links-light">
+              <a href="gallery.html" onClick={() => setMenuOpen(false)}>photo gallery</a>
+              <a href="about.html" onClick={() => setMenuOpen(false)}>about us</a>
             </div>
           </div>
           <div className="menu-bottom">
-            <span className="kick">Plynule · smoothly, without interruption</span>
-            <a href={IG} target="_blank" rel="noopener" onClick={() => setMenuOpen(false)}><IgGlyph /> @plynule</a>
+            <div className="menu-contact-links" aria-label="Contact links">
+              <a href={IG_DM} target="_blank" rel="noopener" onClick={() => setMenuOpen(false)}><DmGlyph /><span>instagram dm</span></a>
+              <a href={IG} target="_blank" rel="noopener" onClick={() => setMenuOpen(false)}><IgGlyph /><span>instagram</span></a>
+              <a href="mailto:hello@plynule.com" onClick={() => setMenuOpen(false)}><EmailGlyph /><span>email</span></a>
+              <a href={LINKEDIN} target="_blank" rel="noopener" onClick={() => setMenuOpen(false)}><LinkedInGlyph /><span>linked in</span></a>
+            </div>
           </div>
-          <GlassRuler />
         </div>
       </div>
 
@@ -463,7 +352,6 @@ function App() {
               ></iframe>
             </div>
           </div>
-          <InstagramLatest />
         </section>
 
       </header>
@@ -473,10 +361,10 @@ function App() {
         <div className="foot-grid">
           <a className="foot-logo" href="#top" aria-label="Plynule home"><Logo h={50} /></a>
           <div className="foot-actions" aria-label="Contact links">
-            <a href={IG_DM} target="_blank" rel="noopener"><DmGlyph /><span>Instagram DM</span></a>
-            <a href={IG} target="_blank" rel="noopener"><IgGlyph /><span>Instagram</span></a>
-            <a href="mailto:hello@plynule.com"><EmailGlyph /><span>Email</span></a>
-            <a href={LINKEDIN} target="_blank" rel="noopener"><LinkedInGlyph /><span>LinkedIn</span></a>
+            <a href={IG_DM} target="_blank" rel="noopener"><DmGlyph /><span>instagram dm</span></a>
+            <a href={IG} target="_blank" rel="noopener"><IgGlyph /><span>instagram</span></a>
+            <a href="mailto:hello@plynule.com"><EmailGlyph /><span>email</span></a>
+            <a href={LINKEDIN} target="_blank" rel="noopener"><LinkedInGlyph /><span>linked in</span></a>
           </div>
         </div>
       </footer>

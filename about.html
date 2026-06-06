@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Plynule — about us</title>
+<script>document.documentElement.classList.add('js');</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="styles-v2.css?v=20260606-shared-pages" />
+<script defer src="https://cdn.jsdelivr.net/npm/img-comparison-slider@8/dist/index.js"></script>
+</head>
+<body class="subpage">
+  <div class="grain-backdrop" aria-hidden="true"></div>
+
+  <main class="page-main">
+    <h1 class="page-title">about us</h1>
+    <section class="about-layout" aria-label="About Plynule">
+      <div class="about-copy">
+        <p>We are Ollie and Filip. We build furniture because boring furniture already exists.</p>
+        <p>It started with one tree, a borrowed saw, and a plan that was probably too simple. Now we cut, dry, draw, oil, doubt, laugh, and make pieces that move a little.</p>
+        <div class="about-values" aria-label="Plynule values">
+          <span>one tree at a time</span>
+          <span>four years of drying</span>
+          <span>no rush, no straight-line religion</span>
+        </div>
+      </div>
+
+      <div class="about-slider">
+        <img-comparison-slider value="20">
+          <img slot="first" src="assets/about/my_dva_2.jpg" alt="Ollie and Filip before" />
+          <img slot="second" src="assets/about/my_dva_1.jpg" alt="Ollie and Filip after" />
+          <span slot="handle" class="about-handle">↔</span>
+        </img-comparison-slider>
+      </div>
+    </section>
+  </main>
+
+  <script src="page-grain.js"></script>
+  <script src="page-shell.js?v=20260606-brand-letters"></script>
+  <script src="page-logo.js"></script>
+</body>
+</html>
