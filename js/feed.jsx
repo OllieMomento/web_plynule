@@ -42,21 +42,49 @@ function Polaroid({ p, i }) {
 }
 
 const STRIP_CARDS = [
-  { id: 'polaroid-4', src: 'assets/feed/polaroid-4.png', cap: 'Cut by us. Sustainably.', rot: -18, dx: '-125%', dxTablet: '-92%', dxMobile: '-10%', dy: '24px' },
-  { id: 'polaroid-5', src: 'assets/feed/polaroid-5.png', cap: 'Milled into planks.', rot: 11, dx: '-75%', dxTablet: '-54%', dxMobile: '10%', dy: '-16px' },
+  { id: 'polaroid-1', src: 'assets/feed/polaroid-1.png', cap: 'Cut by us. Sustainably.', rot: -18, dx: '-125%', dxTablet: '-92%', dxMobile: '-10%', dy: '24px' },
+  { id: 'polaroid-2', src: 'assets/feed/polaroid-2.png', cap: 'Milled into planks.', rot: 11, dx: '-75%', dxTablet: '-54%', dxMobile: '10%', dy: '-16px' },
   { id: 'polaroid-3', src: 'assets/feed/polaroid-3.png', cap: 'Four years drying.', rot: -5, dx: '-25%', dxTablet: '-18%', dxMobile: '-8%', dy: '18px' },
-  { id: 'polaroid-6', src: 'assets/feed/polaroid-6.png', cap: 'Furniture takes shape.', rot: 7, dx: '25%', dxTablet: '18%', dxMobile: '8%', dy: '-18px' },
-  { id: 'polaroid-1', src: 'assets/feed/polaroid-1.png', cap: 'Top coat of oil.', rot: -10, dx: '75%', dxTablet: '54%', dxMobile: '-6%', dy: '20px' },
-  { id: 'polaroid-2', src: 'assets/feed/polaroid-2.png', cap: 'Done. Ready to buy.', rot: 16, dx: '125%', dxTablet: '92%', dxMobile: '6%', dy: '26px' },
+  { id: 'polaroid-4', src: 'assets/feed/polaroid-4.png', cap: 'Furniture takes shape.', rot: 7, dx: '25%', dxTablet: '18%', dxMobile: '8%', dy: '-18px' },
+  { id: 'polaroid-5', src: 'assets/feed/polaroid-5.png', cap: 'Top coat of oil.', rot: -10, dx: '75%', dxTablet: '54%', dxMobile: '-6%', dy: '20px' },
+  { id: 'polaroid-6', src: 'assets/feed/polaroid-6.png', cap: 'Done. Ready to buy.', rot: 16, dx: '125%', dxTablet: '92%', dxMobile: '6%', dy: '26px' },
 ];
 
 function PolaroidStrip() {
+  const [active, setActive] = React.useState(0);
+  const [leaving, setLeaving] = React.useState(null);
+  const [returning, setReturning] = React.useState(null);
+  const [isMoving, setIsMoving] = React.useState(false);
+  const [stackOrder, setStackOrder] = React.useState(() => STRIP_CARDS.map((_, i) => i).reverse());
+  const total = STRIP_CARDS.length;
+
+  const goTo = (nextIndex) => {
+    if (isMoving || nextIndex === active) return;
+    const current = active;
+    setLeaving(active);
+    setIsMoving(true);
+    window.setTimeout(() => {
+      setActive(nextIndex);
+      setStackOrder((order) => [current, ...order.filter((i) => i !== current)]);
+      setLeaving(null);
+      setReturning(current);
+      window.setTimeout(() => {
+        setReturning(null);
+        setIsMoving(false);
+      }, 180);
+    }, 180);
+  };
+
+  const prev = () => goTo((active - 1 + total) % total);
+  const next = () => goTo((active + 1) % total);
+
   return (
     <div className="pstrip" aria-label="Workshop polaroid cards">
       {STRIP_CARDS.map((p, i) => (
         <figure
-          className="pstrip-card"
+          className={'pstrip-card' + (i === active ? ' is-active' : '') + (i === leaving ? ' is-leaving' : '') + (i === returning ? ' is-returning' : '')}
           key={p.id}
+          aria-hidden={i === active || i === leaving || i === returning ? 'false' : 'true'}
           style={{
             '--i': i,
             '--rot': p.rot + 'deg',
@@ -64,6 +92,7 @@ function PolaroidStrip() {
             '--dy': p.dy,
             '--dx-tablet': p.dxTablet || p.dx,
             '--dx-mobile': p.dxMobile || p.dxTablet || p.dx,
+            '--stack-z': stackOrder.indexOf(i) + 1,
           }}
         >
           <image-slot
@@ -76,6 +105,11 @@ function PolaroidStrip() {
           <figcaption className="pstrip-cap">{p.cap}</figcaption>
         </figure>
       ))}
+      <div className="pstrip-controls" aria-label="Browse polaroid photos">
+        <button type="button" onClick={prev} aria-label="Previous polaroid" disabled={isMoving}>←</button>
+        <span>{active + 1} / {total}</span>
+        <button type="button" onClick={next} aria-label="Next polaroid" disabled={isMoving}>→</button>
+      </div>
     </div>
   );
 }

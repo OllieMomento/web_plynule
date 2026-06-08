@@ -23,7 +23,7 @@
 <script type="text/babel" src="js/scenes-a.jsx"></script>
 <script type="text/babel" src="js/scenes-b.jsx"></script>
 <script type="text/babel" src="js/story.jsx"></script>
-<script type="text/babel" src="js/feed.jsx?v=polaroids-process"></script>
+<script type="text/babel" src="js/feed.jsx?v=mobile-polaroid-carousel"></script>
 <script type="text/babel" src="js/grain.jsx"></script>
 
 <script type="text/babel">
@@ -305,7 +305,7 @@ function App() {
         <div className="menu-panel-inner">
           <div className="menu-grid">
             <div className="menu-brand">
-              <Logo h={92} />
+              <Logo h={88} />
             </div>
             <div className="menu-links-light">
               <a href="gallery.html" onClick={() => setMenuOpen(false)}>photo gallery</a>
@@ -329,10 +329,11 @@ function App() {
           <span className="line-mask"><span>From tree</span></span>
           <span className="line-mask" style={{ '--i': 1 }}><span>to stool <span className="translation">[:stůl]</span></span></span>
         </h1>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-          <p className="hero-sub reveal" style={{ '--i': 2 }}>We’re Duo Plynule. We start with the tree, make a lot of sawdust, have fun, sand a lot, and stay with each piece until the top coat of oil.</p>
-        </div>
+        <p className="hero-sub reveal" style={{ '--i': 2 }}>We’re Duo Plynule. We start with the tree, make a lot of sawdust, have fun, sand a lot, and stay with each piece until the top coat of oil.</p>
 
+        <section className="process-intro reveal" aria-label="Furniture process">
+          <h2 className="process-title">How it happens</h2>
+        </section>
         <div className="reveal"><PolaroidStrip /></div>
 
         <section className="custom-morph reveal" aria-label="Custom furniture">

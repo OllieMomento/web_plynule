@@ -29,7 +29,7 @@
     <div class="menu-panel" aria-hidden="true">
       <div class="menu-panel-inner">
         <div class="menu-grid">
-          <div class="menu-brand">${logo(92)}</div>
+          <div class="menu-brand">${logo(88)}</div>
           <div class="menu-links-light">
             <a href="index.html">home</a>
             <a href="gallery.html">photo gallery</a>
